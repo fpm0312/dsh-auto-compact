@@ -1,0 +1,46 @@
+{
+  "name": "dsh-auto-compact",
+  "version": "0.1.2",
+  "description": "DeepSeek Harness 插件：上下文占用超过阈值（默认 45%）且对话静默达到设定时长（默认 3 分钟）时，自动压缩会话历史。",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fpm0312/dsh-auto-compact.git"
+  },
+  "homepage": "https://github.com/fpm0312/dsh-auto-compact#readme",
+  "bugs": {
+    "url": "https://github.com/fpm0312/dsh-auto-compact/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "compaction",
+    "context",
+    "自动压缩"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.3"
+  },
+  "scripts": {
+    "test": "node --test test/auto-compact.test.mjs",
+    "check": "node --check lib/index.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "author": "飞破梦"
+}

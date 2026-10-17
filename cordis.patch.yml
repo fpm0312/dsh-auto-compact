@@ -1,0 +1,20 @@
+# dsh-auto-compact — profile 组合包（bundle patch）
+#
+# 安装后由 profile 的 node_modules 按包名解析到 lib/index.js。
+# 这一行把插件的宿主半侧挂进配置树；插件自身没有前端半侧。
+- insert:
+    - id: auto-compact
+      name: dsh-auto-compact
+      config:
+        # 触发阈值：上下文占用占模型上下文窗口的比例。
+        thresholdRatio: 0.45
+        # 静默时长：多久没有新事件才算“对话没动静”（毫秒）。
+        idleMs: 180000
+        # 巡检间隔（毫秒）。
+        pollMs: 15000
+        # 两次自动压缩之间的最小间隔（毫秒），成功或失败都算。
+        cooldownMs: 300000
+        # 观察期开关：true 时只记录“本该压缩”，不真正压缩。
+        dryRun: false
+        # 状态心跳文件；false 关闭。
+        statusFile: true
