@@ -7,7 +7,7 @@
       name: dsh-auto-compact
       config:
         # 触发阈值：上下文占用占模型上下文窗口的比例。
-        thresholdRatio: 0.45
+        thresholdRatio: 0.30
         # 静默时长：多久没有新事件才算“对话没动静”（毫秒）。
         idleMs: 180000
         # 巡检间隔（毫秒）。

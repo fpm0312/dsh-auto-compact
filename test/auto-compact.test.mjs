@@ -13,7 +13,7 @@ import { apply, decide, resolveConfig, resolveStatusPath } from "../lib/index.js
 test("resolveConfig 使用默认值", () => {
   const config = resolveConfig(undefined);
   assert.equal(config.enabled, true);
-  assert.equal(config.thresholdRatio, 0.45);
+  assert.equal(config.thresholdRatio, 0.30);
   assert.equal(config.idleMs, 180000);
   assert.equal(config.pollMs, 15000);
   assert.equal(config.dryRun, false);
@@ -25,7 +25,7 @@ test("resolveConfig 接受覆盖并拒绝越界值", () => {
   assert.equal(config.idleMs, 90000);
   assert.equal(config.pollMs, 15000); // 0 越界 → 回退
   const clamped = resolveConfig({ thresholdRatio: 4 });
-  assert.equal(clamped.thresholdRatio, 0.45);
+  assert.equal(clamped.thresholdRatio, 0.30);
 });
 
 test("resolveConfig 让巡检间隔不超过静默窗口", () => {
@@ -49,7 +49,7 @@ test("decide 覆盖所有跳过原因", () => {
     lastAttemptAt: 0,
     totalTokens: 500_000,
     contextWindow: 1_000_000,
-    thresholdRatio: 0.45,
+    thresholdRatio: 0.30,
     idleMs: 180_000,
     cooldownMs: 300_000,
   };
@@ -62,20 +62,22 @@ test("decide 覆盖所有跳过原因", () => {
   assert.equal(decide({ ...base, contextWindow: undefined }).reason, "unknown-context-window");
   assert.equal(decide({ ...base, totalTokens: undefined }).reason, "no-measurement");
   assert.equal(decide({ ...base, minTokens: 600_000 }).reason, "below-min-tokens");
-  assert.equal(decide({ ...base, totalTokens: 400_000 }).reason, "below-threshold");
+  assert.equal(decide({ ...base, totalTokens: 200_000 }).reason, "below-threshold");
 });
 
 test("decide 在边界上刚好命中阈值", () => {
-  const result = decide({
+  const boundary = {
     status: "idle",
     now: 1_000_000,
     lastActivityAt: 1_000_000 - 180_000,
-    totalTokens: 450_000,
     contextWindow: 1_000_000,
-    thresholdRatio: 0.45,
+    thresholdRatio: 0.30,
     idleMs: 180_000,
-  });
-  assert.equal(result.compact, true);
+  };
+  // 30% 整：等于阈值就压。
+  assert.equal(decide({ ...boundary, totalTokens: 300_000 }).compact, true);
+  // 差一个 token 就不压。
+  assert.equal(decide({ ...boundary, totalTokens: 299_999 }).reason, "below-threshold");
 });
 
 /* ------------------------------------------------------------------ *
@@ -215,7 +217,8 @@ test("上下文低于阈值时不压缩", async () => {
   const compaction = { async compactNow() { calls.push(1); return { shadowedSeqs: [1], shadowedTokenCount: 1 }; } };
   const agent = makeAgent();
   agent.ctx = { get: (key) => (key === "compaction" ? compaction : undefined) };
-  const host = createHost({ agents: [agent], compaction, meter: () => ({ totalTokens: 400_000 }) });
+  // 29% 正好落在默认阈值（30%）下面。
+  const host = createHost({ agents: [agent], compaction, meter: () => ({ totalTokens: 290_000 }) });
 
   apply(host.ctx, { idleMs: 180_000, statusFile: false });
   advance(600_000);
@@ -366,14 +369,14 @@ test("写入心跳状态文件", async () => {
   // 这个宿主故意不提供 llm 服务，验证“拿不到上下文窗口”时如实留空。
   const host = createHost({ agents: [agent], meter: () => ({ totalTokens: 500_000 }), llm: false });
 
-  apply(host.ctx, { idleMs: 180_000, statusFile: statusPath });
+  apply(host.ctx, { idleMs: 180_000, statusFile: statusPath, thresholdRatio: 0.4 });
   advance(200_000);
   await host.tick();
   await host.settle();
 
   const payload = JSON.parse(readFileSync(statusPath, "utf8"));
   assert.equal(payload.plugin, "dsh-auto-compact");
-  assert.equal(payload.config.thresholdRatio, 0.45);
+  assert.equal(payload.config.thresholdRatio, 0.4);
   assert.equal(payload.agents.length, 1);
   assert.equal(payload.agents[0].totalTokens, 500_000);
   assert.equal(payload.agents[0].contextWindow, undefined, "没有窗口信息时应如实留空");
@@ -389,13 +392,13 @@ test("/autocompact 命令可查询状态", async () => {
   const agent = makeAgent();
   const host = createHost({ agents: [agent], meter: () => ({ totalTokens: 123_456 }) });
 
-  apply(host.ctx, { idleMs: 180_000, statusFile: false });
+  apply(host.ctx, { idleMs: 180_000, statusFile: false, thresholdRatio: 0.25 });
   await host.settle();
   const definition = host.commands.get("autocompact");
   assert.ok(definition, "命令应已注册");
   const result = await definition.handler({ agent, rawInput: "", signal: new AbortController().signal });
   assert.equal(result.kind, "success");
-  assert.match(result.text, /45\.0%/);
+  assert.match(result.text, /阈值 25\.0%/);
   await host.dispose();
   restoreClock();
 });

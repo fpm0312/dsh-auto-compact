@@ -1,11 +1,11 @@
 # dsh-auto-compact
 
-DeepSeek Harness 插件：**上下文占用超过 45%、且对话 3 分钟没有动静时，自动压缩会话历史。**
+DeepSeek Harness 插件：**上下文占用超过 30%、且对话 3 分钟没有动静时，自动压缩会话历史。**
 
 阈值、静默时长、巡检间隔、冷却时间都可配置。
 
 > **EN** — A DSH host plugin that compacts a session automatically once its context
-> usage passes a threshold (45% by default) **and** the conversation has been idle
+> usage passes a threshold (30% by default) **and** the conversation has been idle
 > for a while (3 minutes by default). Zero runtime dependencies; it only decides
 > *when*, and delegates the actual summarization to the official
 > `@deepseek-ai/dsh-compaction-basic` backend via `/compact`.
@@ -83,7 +83,7 @@ dsh plugin --profile desktop add "link:$PWD"
 - id: auto-compact
   name: dsh-auto-compact
   config:
-    thresholdRatio: 0.45     # 上下文占用阈值（占模型上下文窗口比例）
+    thresholdRatio: 0.30     # 上下文占用阈值（占模型上下文窗口比例）
     idleMs: 180000           # 静默多久算“没动静”（毫秒）
     pollMs: 15000            # 巡检间隔（毫秒）
     cooldownMs: 300000       # 两次尝试之间的最小间隔（毫秒）
